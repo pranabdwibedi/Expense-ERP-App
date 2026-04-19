@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - email: string (required) - User email
+    //   - name: string (optional) - User display name
+    //   - role: string (required) - ['employee', 'manager', 'ceo', 'finance', 'admin']
+    //
+    // Collection: expenses
+    // Document ID: {expenseId}
+    // Fields:
+    //   - employeeId: string (required) - UID of the submitter
+    //   - employeeName: string (optional)
+    //   - amount: number (required) - Expense amount
+    //   - category: string (required)
+    //   - description: string (optional)
+    //   - status: string (required) - ['pending_manager', 'pending_ceo', 'pending_finance', 'settled', 'rejected']
+    //   - submittedAt: timestamp (required)
+    //   - history: list (required) - Audit trail
+    //
+    // Collection: notifications
+    // Document ID: {notificationId}
+    // Fields:
+    //   - userId: string (required) - Recipient UID
+    //   - message: string (required)
+    //   - type: string (optional)
+    //   - read: bool (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "kumarpranab870@gmail.com" || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['employee', 'manager', 'ceo', 'finance', 'admin'];
+    }
+
+    function isValidExpense(data) {
+      return data.keys().hasAll(['employeeId', 'amount', 'category', 'status', 'submittedAt', 'history']) &&
+             data.employeeId is string &&
+             data.amount is number && data.amount > 0 &&
+             data.category is string &&
+             data.status in ['pending_manager', 'pending_ceo', 'pending_finance', 'settled', 'rejected'] &&
+             data.submittedAt is timestamp &&
+             data.history is list &&
+             (!('attachmentUrl' in data) || data.attachmentUrl is string) &&
+             (!('attachmentName' in data) || data.attachmentName is string);
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'message', 'read', 'createdAt']) &&
+             data.userId is string &&
+             data.message is string && data.message.size() < 500 &&
+             data.read is bool &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+  }
+}

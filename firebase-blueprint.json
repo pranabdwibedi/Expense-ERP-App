@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["employee", "manager", "ceo", "finance", "admin"] },
+        "managerId": { "type": "string", "description": "UID of the assigned manager" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Expense": {
+      "title": "Expense Claim",
+      "description": "An expense claim submitted by an employee.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string", "description": "UID of the employee who submitted the claim" },
+        "employeeName": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending_manager", "pending_ceo", "pending_finance", "settled", "rejected"] 
+        },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "attachmentUrl": { "type": "string", "format": "uri" },
+        "attachmentName": { "type": "string" },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": { "type": "string" },
+              "actorId": { "type": "string" },
+              "actorName": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "comment": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["employeeId", "amount", "category", "status", "submittedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notification for users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "message", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expense claims"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}
